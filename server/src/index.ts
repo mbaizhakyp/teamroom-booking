@@ -1,5 +1,6 @@
 import express from "express";
 import type { Application, Request, Response } from "express";
+import roomsRouter from "./routes/room.js";
 
 const app: Application = express();
 const port = 3000; // The port your express server will be running on.
@@ -9,6 +10,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Middleware to parse JSON bodies
 app.use(express.json());
+
+app.use("/rooms", roomsRouter)
 
 // Basic route
 app.get('/', (req: Request, res: Response) => {
