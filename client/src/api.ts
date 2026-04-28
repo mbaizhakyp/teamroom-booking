@@ -246,7 +246,7 @@ export const api = {
   resetMock: () => { localStorage.removeItem(STORE_KEY); },
 
   auth: (body: AuthRequest) => withFallback<AuthResponse>(
-    () => realCall('POST', '/auth', body),
+    () => realCall('POST', '/login', body),
     () => mock.auth(body),
   ),
   getUsers: () => withFallback<User[]>(
