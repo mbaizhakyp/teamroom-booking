@@ -1,3 +1,7 @@
+/* ============================================================
+   APP ROOT · ties pages together
+   ============================================================ */
+
 import { useState, useEffect } from 'react';
 import { api, tokenStore } from './api';
 import type { User, Room, Booking } from './api';
@@ -5,8 +9,9 @@ import { Toast, Brand } from './components/Common';
 import { AuthPage } from './components/AuthPage';
 import { RoomsPage } from './components/RoomsPage';
 import type { RoomPickPrefill } from './components/RoomsPage';
-import './App.css';
 import { BookingDrawer } from './components/BookingDrawer';
+import { BookingsPage } from './components/BookingsPage';
+import './App.css';
 
 interface AuthedState { token: string; user: User; }
 
@@ -15,16 +20,22 @@ function App() {
     const t = tokenStore.get();
     if (!t) return null;
     const decoded = tokenStore.decode();
-    if (!decoded || decoded.exp < Date.now()) { tokenStore.clear(); return null; }
+    if (!decoded || decoded.exp < Date.now()) {
+      tokenStore.clear();
+      return null;
+    }
     return { token: t, user: { id: decoded.uid, name: 'Scholar', email: '' } };
   });
-  const [pickedRoom, setPickedRoom] = useState<Room | null>(null);
-  const [prefill, setPrefill] = useState<RoomPickPrefill | null>(null);
+
+  const [page, setPage] = useState<'rooms' | 'bookings'>('rooms');
   const [rooms, setRooms] = useState<Room[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pickedRoom, setPickedRoom] = useState<Room | null>(null);
+  const [prefill, setPrefill] = useState<RoomPickPrefill | null>(null);
   const [toast, setToast] = useState<{ msg: string | null; kind: string | null }>({ msg: null, kind: null });
+
   const showToast = (msg: string, kind?: string | null) => setToast({ msg, kind: kind || null });
 
   async function loadAll() {
@@ -36,8 +47,9 @@ function App() {
         const me = u.data.find(x => x.id === authed.user.id);
         if (me) setAuthed(a => a ? { ...a, user: me } : a);
       }
-    } catch (e) { console.error('load error', e); }
-    finally { setLoading(false); }
+    } catch (e) {
+      console.error('load error', e);
+    } finally { setLoading(false); }
   }
 
   useEffect(() => {
@@ -45,7 +57,11 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed?.token]);
 
-  function logout() { tokenStore.clear(); setAuthed(null); showToast('Farewell, scholar'); }
+  function logout() {
+    tokenStore.clear();
+    setAuthed(null);
+    showToast('Farewell, scholar');
+  }
 
   if (!authed) {
     return (
@@ -60,6 +76,10 @@ function App() {
     <div className="app">
       <header className="topbar">
         <Brand />
+        <nav className="nav">
+          <button className={'nav-link ' + (page === 'rooms' ? 'active' : '')} onClick={() => setPage('rooms')}>The Halls</button>
+          <button className={'nav-link ' + (page === 'bookings' ? 'active' : '')} onClick={() => setPage('bookings')}>The Ledger</button>
+        </nav>
         <div className="row gap-24">
           <div style={{ textAlign: 'right' }}>
             <div className="section-label">Logged in as</div>
@@ -69,20 +89,30 @@ function App() {
         </div>
       </header>
 
-      <RoomsPage
-        rooms={rooms}
-        bookings={bookings}
-        loading={loading}
-        isMock={api.isMock()}
-        onPickRoom={(r, pre) => { setPickedRoom(r); setPrefill(pre || null); }}
-        onNewRoom={async (data) => {
-          await api.createRoom(data);
-          await loadAll();
-          showToast(`${data.name} consecrated`, 'gold');
-        }}
-      />
+      {page === 'rooms' && (
+        <RoomsPage
+          rooms={rooms}
+          bookings={bookings}
+          loading={loading}
+          isMock={api.isMock()}
+          onPickRoom={(r, pre) => { setPickedRoom(r); setPrefill(pre || null); }}
+          onNewRoom={async (data) => {
+            await api.createRoom(data);
+            await loadAll();
+            showToast(`${data.name} consecrated`, 'gold');
+          }}
+        />
+      )}
 
-      <Toast msg={toast.msg} kind={toast.kind} onDone={() => setToast({ msg: null, kind: null })} />
+      {page === 'bookings' && (
+        <BookingsPage
+          bookings={bookings}
+          rooms={rooms}
+          users={users}
+          loading={loading}
+        />
+      )}
+
       {pickedRoom && (
         <BookingDrawer
           room={pickedRoom}
@@ -95,6 +125,8 @@ function App() {
           showToast={showToast}
         />
       )}
+
+      <Toast msg={toast.msg} kind={toast.kind} onDone={() => setToast({ msg: null, kind: null })} />
     </div>
   );
 }
