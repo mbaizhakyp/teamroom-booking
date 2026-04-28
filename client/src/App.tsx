@@ -6,6 +6,7 @@ import { AuthPage } from './components/AuthPage';
 import { RoomsPage } from './components/RoomsPage';
 import type { RoomPickPrefill } from './components/RoomsPage';
 import './App.css';
+import { BookingDrawer } from './components/BookingDrawer';
 
 interface AuthedState { token: string; user: User; }
 
@@ -17,7 +18,8 @@ function App() {
     if (!decoded || decoded.exp < Date.now()) { tokenStore.clear(); return null; }
     return { token: t, user: { id: decoded.uid, name: 'Scholar', email: '' } };
   });
-
+  const [pickedRoom, setPickedRoom] = useState<Room | null>(null);
+  const [prefill, setPrefill] = useState<RoomPickPrefill | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -72,7 +74,7 @@ function App() {
         bookings={bookings}
         loading={loading}
         isMock={api.isMock()}
-        onPickRoom={(r) => console.log('picked room', r)}
+        onPickRoom={(r, pre) => { setPickedRoom(r); setPrefill(pre || null); }}
         onNewRoom={async (data) => {
           await api.createRoom(data);
           await loadAll();
@@ -81,6 +83,18 @@ function App() {
       />
 
       <Toast msg={toast.msg} kind={toast.kind} onDone={() => setToast({ msg: null, kind: null })} />
+      {pickedRoom && (
+        <BookingDrawer
+          room={pickedRoom}
+          currentUser={authed.user}
+          users={users}
+          bookings={bookings}
+          prefill={prefill}
+          onClose={() => { setPickedRoom(null); setPrefill(null); }}
+          onBooked={async () => { setPickedRoom(null); setPrefill(null); await loadAll(); }}
+          showToast={showToast}
+        />
+      )}
     </div>
   );
 }
